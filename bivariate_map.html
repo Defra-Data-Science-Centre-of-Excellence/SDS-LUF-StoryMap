@@ -32,7 +32,7 @@
     box-shadow: 0 2px 6px rgba(0,0,0,0.12); z-index: 650;
   }
   #legend {
-    position: absolute; bottom: 70px; left: 70px;
+    position: absolute; bottom: 10px; left: 70px;
     z-index: 650;
     pointer-events: all;
   }
@@ -320,7 +320,7 @@ function renderLegend(ramp, vx, vy, bivariate, uniVar) {
     svg += `</svg>`;
 
     // Wrap in a rotated container
-    legend.innerHTML = `<div style="transform:rotate(315deg);transform-origin:center center;display:inline-block;">${svg}</div>`;
+    legend.innerHTML = `<div style="transform:rotate(315deg);transform-origin:bottom left;display:inline-block;">${svg}</div>`;
 
   } else if (uniVar) {
     const cell = 100, h = 36, gap = 3, pad = 16, fs = 9;
