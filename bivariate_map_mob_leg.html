@@ -13,8 +13,8 @@
     z-index: 1000; position: relative;
   }
   .ctrl { display: flex; flex-direction: column; gap: 3px; }
-  .ctrl label { font-size: 11px; color: #777; text-transform: uppercase; letter-spacing: 0.04em; }
-  .ctrl select { font-size: 13px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; background: white; }
+  .ctrl label { font-size: 18px; color: #777; text-transform: uppercase; letter-spacing: 0.04em; }
+  .ctrl select { font-size: 20px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; background: white; }
   #map-wrap { flex: 1; position: relative; overflow: hidden; }
   #basemap { position: absolute; inset: 0; z-index: 0; }
   .hex {
@@ -282,7 +282,7 @@ function renderLegend(ramp, vx, vy, bivariate, uniVar) {
     const gap      = 3;
     const pad      = 20;
     const labelGap = 6;
-    const fs       = 9;
+    const fs       = 13;
     const gridSize = 3 * cell + 2 * gap;  // 126
 
     // Canvas large enough for the grid + x labels below + y labels left
