@@ -34,7 +34,10 @@ else:
 OUTPUT = REPO_ROOT / "index.html"
 
 # Directory or file names to skip entirely.
-EXCLUDE_NAMES = {".git", ".github", "node_modules", "__pycache__", ".DS_Store"}
+EXCLUDE_NAMES = {
+    ".git", ".github", "node_modules", "__pycache__", ".DS_Store",
+    "land_cover_map_and_treemap",
+}
 # Skip hidden files/dirs (names starting with ".") in addition to the above.
 SKIP_HIDDEN = True
 # ------------------------------------------------------------------------

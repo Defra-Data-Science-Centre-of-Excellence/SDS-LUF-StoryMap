@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Land cover composition map and treemap</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<link rel="stylesheet" href="land_cover_map_and_treemap/css/map-treemap.css">
+</head>
+<body data-classes-only="true" data-asset-root="land_cover_map_and_treemap">
+<div class="frame">
+  <header class="page-header">
+    <div class="page-title">
+      <h1>Land cover composition</h1>
+      <div class="sub">
+        <ul class="instructions">
+          <li>Hover over a landscape region to preview its land cover composition. Select a region to keep it active.</li>
+          <li>Click a treemap square to isolate that land cover on the map; click it again to clear the isolation.</li>
+          <li>Use the drop-down or the 'Previous geography' and 'Next geography' arrows to select a region or National. Use the 'Opacity' slider to adjust the transparency of the selected region overlay. <span class="nowrap">Use 'Download SVG' or 'Download PNG'</span> to export the current view to an image.</li>
+        </ul>
+        <p>Based on the <a href="https://naturalengland-defra.opendata.arcgis.com/maps/19aa7b1604434fd7a3b35f2fbfb9c519/about" target="_blank" rel="noopener">Living England 2022-23 habitat map</a>.</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar" role="toolbar" aria-label="Map and treemap controls">
+    <label class="view-select"><span class="sr-only">View</span><select id="viewSelect" aria-label="Select view"></select></label>
+    <span class="nav-pair">
+      <button class="btn nav-arrow previous" id="prevView" aria-label="Previous geography" title="Previous geography"><span class="nav-arrow-icon" aria-hidden="true"></span></button>
+      <button class="btn nav-arrow next" id="nextView" aria-label="Next geography" title="Next geography"><span class="nav-arrow-icon" aria-hidden="true"></span></button>
+    </span>
+    <label class="opacity-control is-disabled" id="regionOpacityControl">
+      <span class="opacity-label">Opacity</span>
+      <span class="opacity-controls"><span class="opacity-endpoint">0%</span><span class="opacity-range"><input id="regionOpacity" type="range" min="0" max="100" value="62" aria-label="Selected region opacity" disabled></span><span class="opacity-endpoint">100%</span><!-- <output class="opacity-value" id="regionOpacityValue">62%</output> --></span>
+    </label>
+    <span class="downloads">
+      <button class="btn" id="dlSvg">Download SVG</button>
+      <button class="btn" id="dlPng">Download PNG</button>
+    </span>
+  </div>
+
+  <p id="appError"></p>
+  <p class="sr-only" id="mapStatus" aria-live="polite"></p>
+
+  <div class="layout">
+    <section class="map-panel" aria-label="Land cover map"><div id="map"></div></section>
+    <section class="treemap-panel" aria-label="Land cover treemap">
+      <div class="treemap-local-header"><p class="crumb" id="crumb"></p></div>
+      <div id="chart"></div>
+    </section>
+  </div>
+</div>
+<div id="tooltip" role="status"></div>
+<script type="module" src="land_cover_map_and_treemap/js/map-treemap.js"></script>
+</body>
+</html>
