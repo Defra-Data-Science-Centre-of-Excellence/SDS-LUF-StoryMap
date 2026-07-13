@@ -16,9 +16,11 @@ const MAP_ARIA_ORDER = [
   "Solar energy",
 ];
 
-export async function loadMapIdRasters(mapData) {
-  const images = mapData.idImages ?? {};
-  await Promise.all(Object.values(images).map(url => loadIdRaster(url, mapData)));
+export async function loadMapIdRasters(mapData, mode = null) {
+  const images = mode
+    ? { [mode]: mapData.idImages?.[mode] }
+    : mapData.idImages ?? {};
+  await Promise.all(Object.values(images).filter(Boolean).map(url => loadIdRaster(url, mapData)));
 }
 
 export function updateSelectedRegionOpacity(container, state) {
@@ -177,9 +179,9 @@ function mapAriaLabel(state) {
     .map(name => `${name}, ${ariaPercentage(values[name])}`)
     .join("; ");
   const region = state.view && state.view !== "national"
-    ? ` for the region '${state.view}', shown with a black outline`
+    ? ` for the region '${state.view}', selected with a black outline`
     : "";
-  return `A thematic map of England with a matching treemap chart legend showing broad habitat land cover categories and their proportions${region}, given as: ${composition}.`;
+  return `A thematic map of England with a matching treemap chart and legend showing broad habitat land cover categories and their proportions${region}, given as: ${composition}.`;
 }
 
 function ariaPercentage(value) {
@@ -271,7 +273,7 @@ function applyRasterIsolation(image, mapData, mode, isolation, region) {
   const cached = idUrl ? idRasterCache.get(idUrl) : null;
   if (!cached) {
     image.attr("href", mapData.images[mode]);
-    loadMapIdRasters(mapData)
+    loadMapIdRasters(mapData, mode)
       .then(() => {
         if (request === rasterRequest && image.node().isConnected) {
           applyRasterIsolation(image, mapData, mode, isolation, region);

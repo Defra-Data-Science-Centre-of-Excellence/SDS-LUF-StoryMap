@@ -1,9 +1,7 @@
 // map-treemap.js — linked map and treemap page wiring.
 
 import { render, fmtPct } from "./treemap.js";
-import {
-  loadMapIdRasters, renderMap, updateSelectedRegionOpacity,
-} from "./map.js";
+import { loadMapIdRasters, renderMap, updateSelectedRegionOpacity } from "./map.js";
 
 const assetRoot = document.body.dataset.assetRoot?.replace(/\/+$/, "");
 const assetUrl = path => assetRoot ? `${assetRoot}/${path}` : path;
@@ -45,10 +43,21 @@ async function boot() {
   ]);
 
   state.view = data.defaultView ?? "national";
-  await loadMapIdRasters(mapData);
   populateViews();
   wireControls();
   update();
+  scheduleIdRasterWarmup();
+}
+
+function scheduleIdRasterWarmup() {
+  const warm = () => loadMapIdRasters(mapData, "classes").catch(error => {
+    console.warn("Could not warm the class isolation raster:", error);
+  });
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(warm, { timeout: 2000 });
+  } else {
+    window.setTimeout(warm, 250);
+  }
 }
 
 async function fetchJson(url) {
