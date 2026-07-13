@@ -1,5 +1,5 @@
 const READY_MESSAGE = "land-cover-export-ready";
-const DOWNLOAD_MESSAGE = "land-cover-export-download";
+const PREVIEW_MESSAGE = "land-cover-export-preview";
 const pendingExports = new Map();
 
 window.addEventListener("message", event => {
@@ -15,11 +15,11 @@ export function prepareExport() {
   if (!isEmbedded()) return null;
 
   const token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-  const helperUrl = new URL("./export-download.html", import.meta.url);
+  const helperUrl = new URL("./export-preview.html", import.meta.url);
   helperUrl.searchParams.set("token", token);
   const tab = window.open(helperUrl.href, "_blank");
   if (!tab) {
-    showExportError("Export could not open a download tab. The embedding page must allow popups.");
+    showExportError("Export could not open a preview tab. The embedding page must allow popups.");
     return false;
   }
 
@@ -27,7 +27,7 @@ export function prepareExport() {
   target.loadTimeout = window.setTimeout(() => {
     if (!pendingExports.delete(token)) return;
     if (!tab.closed) tab.close();
-    showExportError("The download tab did not load. Please try the export again.");
+    showExportError("The export preview tab did not load. Please try the export again.");
   }, 30000);
   pendingExports.set(token, target);
   return target;
@@ -39,7 +39,7 @@ export function deliverExport(blob, name, target) {
     return;
   }
   if (!target || target.tab.closed) {
-    showExportError("The download tab was closed before the export was ready.");
+    showExportError("The preview tab was closed before the export was ready.");
     return;
   }
   target.payload = { blob, name };
@@ -49,7 +49,7 @@ export function deliverExport(blob, name, target) {
 function sendToHelper(target) {
   if (!target.ready || !target.payload) return;
   target.tab.postMessage(
-    { type: DOWNLOAD_MESSAGE, token: target.token, ...target.payload },
+    { type: PREVIEW_MESSAGE, token: target.token, ...target.payload },
     window.location.origin,
   );
   pendingExports.delete(target.token);

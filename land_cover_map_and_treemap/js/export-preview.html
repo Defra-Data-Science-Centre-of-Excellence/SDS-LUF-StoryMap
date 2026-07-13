@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Preparing export preview</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: #fff;
+    }
+
+    #status {
+      margin: 0;
+      padding: 1rem;
+      color: #111;
+      font: 16px/1.4 Arial, sans-serif;
+    }
+
+    #preview {
+      display: block;
+      width: auto;
+      max-width: 100%;
+      height: auto;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <p id="status">Preparing export preview...</p>
+  <img id="preview" hidden alt="">
+  <script>
+    const READY_MESSAGE = "land-cover-export-ready";
+    const PREVIEW_MESSAGE = "land-cover-export-preview";
+    const token = new URL(window.location.href).searchParams.get("token");
+    const openerWindow = window.opener;
+    const status = document.getElementById("status");
+    const preview = document.getElementById("preview");
+
+    if (!token || !openerWindow) {
+      status.textContent = "The export could not be prepared. Please close this tab and try again.";
+    } else {
+      window.addEventListener("message", event => {
+        const message = event.data;
+        if (
+          event.origin !== window.location.origin ||
+          event.source !== openerWindow ||
+          message?.type !== PREVIEW_MESSAGE ||
+          message.token !== token ||
+          !(message.blob instanceof Blob)
+        ) return;
+
+        document.title = message.name;
+
+        // safari can lose a blob URL handed to a newly opened tab. rebuild the
+        // transferred blob as a data URL inside this tab before displaying it.
+        if (isSafari()) {
+          const reader = new FileReader();
+          reader.onload = () => showPreview(String(reader.result), message.name);
+          reader.onerror = showPreviewError;
+          reader.readAsDataURL(message.blob);
+          return;
+        }
+
+        const url = URL.createObjectURL(message.blob);
+        showPreview(url, message.name);
+        window.addEventListener("pagehide", () => URL.revokeObjectURL(url), { once: true });
+      }, { once: true });
+
+      function isSafari() {
+        return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      }
+
+      function showPreview(url, name) {
+        preview.onload = () => {
+          status.hidden = true;
+          preview.hidden = false;
+        };
+        preview.onerror = showPreviewError;
+        preview.alt = `Export preview: ${name}`;
+        preview.src = url;
+      }
+
+      function showPreviewError() {
+        status.hidden = false;
+        status.textContent = "The export preview could not be displayed. Please try again.";
+      }
+
+      openerWindow.postMessage(
+        { type: READY_MESSAGE, token },
+        window.location.origin,
+      );
+    }
+  </script>
+</body>
+</html>
