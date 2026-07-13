@@ -52,6 +52,7 @@ export function renderMap(container, mapData, state, handlers = {}) {
   const selectedRegion = mapData.regions.find(region => state.view === region.alt);
   const selectedOutlineWidth = 4.2;
   const hoverOutlineWidth = 3.6;
+  const previewFillOpacity = 0.52;
 
   if (selectedRegion) preloadRegionMask(selectedRegion, mapData);
 
@@ -84,7 +85,11 @@ export function renderMap(container, mapData, state, handlers = {}) {
 
   let hoverOutline = null;
   const regions = svg.append("g").attr("class", "map-regions");
-  const showHoverOutline = region => {
+  const showHoverOutline = (region, path) => {
+    d3.select(path).style(
+      "fill-opacity",
+      state.view === region.alt ? selectedRegionOpacity(state) : previewFillOpacity,
+    );
     setRegionStrokesVisible(regions, false);
     preloadRegionMask(region, mapData);
     if (hoverOutline) {
@@ -93,7 +98,12 @@ export function renderMap(container, mapData, state, handlers = {}) {
     }
     handlers.onPreview?.(region.alt);
   };
-  const hideHoverOutline = () => {
+  const hideHoverOutline = (region, path, remainsActive) => {
+    if (remainsActive) return;
+    d3.select(path).style(
+      "fill-opacity",
+      state.view === region.alt ? selectedRegionOpacity(state) : 0,
+    );
     setRegionStrokesVisible(regions, true);
     if (hoverOutline) hoverOutline.attr("display", "none");
     handlers.onPreview?.(null);
@@ -128,16 +138,14 @@ export function renderMap(container, mapData, state, handlers = {}) {
         .attr("role", "button")
         .attr("aria-label", `${region.alt} - show land cover composition`)
         .attr("aria-pressed", selected ? "true" : "false")
-        .on("pointerenter", ev => {
-          d3.select(ev.currentTarget).raise();
-          showHoverOutline(region);
+        .on("pointerenter", ev => showHoverOutline(region, ev.currentTarget))
+        .on("pointerleave", ev => {
+          hideHoverOutline(region, ev.currentTarget, ev.currentTarget === document.activeElement);
         })
-        .on("pointerleave", hideHoverOutline)
-        .on("focus", ev => {
-          d3.select(ev.currentTarget).raise();
-          showHoverOutline(region);
+        .on("focus", ev => showHoverOutline(region, ev.currentTarget))
+        .on("blur", ev => {
+          hideHoverOutline(region, ev.currentTarget, false);
         })
-        .on("blur", hideHoverOutline)
         .on("click", ev => {
           ev.stopPropagation();
           handlers.onSelect?.(region.alt);

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Preparing download</title>
+</head>
+<body>
+  <p id="status">Preparing download...</p>
+  <script>
+    const READY_MESSAGE = "land-cover-export-ready";
+    const DOWNLOAD_MESSAGE = "land-cover-export-download";
+    const token = new URL(window.location.href).searchParams.get("token");
+    const openerWindow = window.opener;
+    const status = document.getElementById("status");
+
+    if (!token || !openerWindow) {
+      status.textContent = "The export could not be prepared. Please close this tab and try again.";
+    } else {
+      window.addEventListener("message", event => {
+        const message = event.data;
+        if (
+          event.origin !== window.location.origin ||
+          event.source !== openerWindow ||
+          message?.type !== DOWNLOAD_MESSAGE ||
+          message.token !== token ||
+          !(message.blob instanceof Blob)
+        ) return;
+
+        // safari can leave blob URL downloads stuck as "Unknown"
+        if (isSafari()) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const url = String(reader.result).replace(
+              /^data:[^;]*;/,
+              "data:attachment/file;",
+            );
+            startDownload(url, message.name);
+          };
+          reader.onerror = () => {
+            status.textContent = "The download could not be prepared. Please try again.";
+          };
+          reader.readAsDataURL(message.blob);
+          return;
+        }
+
+        const url = URL.createObjectURL(message.blob);
+        startDownload(url, message.name, () => URL.revokeObjectURL(url));
+      }, { once: true });
+
+      function isSafari() {
+        return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      }
+
+      function startDownload(url, name, cleanup) {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = name;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        status.textContent = "Download started. You can close this tab.";
+        window.setTimeout(() => {
+          link.remove();
+          cleanup?.();
+        }, 60000);
+      }
+
+      openerWindow.postMessage(
+        { type: READY_MESSAGE, token },
+        window.location.origin,
+      );
+    }
+  </script>
+</body>
+</html>
