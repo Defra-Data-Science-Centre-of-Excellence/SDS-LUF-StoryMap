@@ -2,6 +2,7 @@
 
 import { render, fmtPct } from "./treemap.js";
 import { loadMapIdRasters, renderMap, updateSelectedRegionOpacity } from "./map.js";
+import { prepareEmbeddedExportTab, triggerDownload } from "./export.js";
 
 const assetRoot = document.body.dataset.assetRoot?.replace(/\/+$/, "");
 const assetUrl = path => assetRoot ? `${assetRoot}/${path}` : path;
@@ -49,6 +50,7 @@ async function boot() {
   scheduleIdRasterWarmup();
 }
 
+// defer categorical raster decoding so the base map can paint before isolation data is prepared
 function scheduleIdRasterWarmup() {
   const warm = () => loadMapIdRasters(mapData, "classes").catch(error => {
     console.warn("Could not warm the class isolation raster:", error);
@@ -424,15 +426,15 @@ async function imageToDataUrl(url) {
 }
 
 async function downloadSvg() {
+  const exportTab = prepareEmbeddedExportTab();
+  if (exportTab === false) return;
   const blob = new Blob([await combinedSvgString()], { type: "image/svg+xml" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename("svg");
-  a.click();
-  URL.revokeObjectURL(a.href);
+  triggerDownload(blob, filename("svg"), exportTab);
 }
 
 async function downloadPng() {
+  const exportTab = prepareEmbeddedExportTab();
+  if (exportTab === false) return;
   const scale = PNG_EXPORT_SCALE;
   const { mapSvg, treemapSvg, mapBox, treemapBox } = await exportPanels();
   const pixelH = Math.round(mapBox.h * scale);
@@ -453,11 +455,7 @@ async function downloadPng() {
   ctx.drawImage(mapImage, 0, 0, mapPixelW, pixelH);
   ctx.drawImage(treemapImage, mapPixelW + gapPixelW, 0, treemapPixelW, pixelH);
   c.toBlob(b => {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(b);
-    a.download = filename("png");
-    a.click();
-    URL.revokeObjectURL(a.href);
+    if (b) triggerDownload(b, filename("png"), exportTab);
   }, "image/png");
 }
 

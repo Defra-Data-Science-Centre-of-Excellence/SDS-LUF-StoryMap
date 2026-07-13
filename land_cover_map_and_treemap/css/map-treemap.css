@@ -442,7 +442,7 @@ h1 {
     }
 }
 
-@media (max-width:700px) {
+@media (max-width:675px) {
     .layout {
         grid-template-columns: 1fr
     }

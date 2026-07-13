@@ -16,6 +16,7 @@ const MAP_ARIA_ORDER = [
   "Solar energy",
 ];
 
+// load only the requested mode's ID raster - isolation data is not needed for the initial map
 export async function loadMapIdRasters(mapData, mode = null) {
   const images = mode
     ? { [mode]: mapData.idImages?.[mode] }
