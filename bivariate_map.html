@@ -129,7 +129,7 @@ const leafMap = L.map('basemap', {
   zoomDelta: 0.5,
 });
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png?key=cb1_3m1a_1_f9cde4e14c26c7d8a2e8d8b9', {
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
   subdomains: 'abcd',
   maxZoom: 19,
@@ -192,6 +192,24 @@ const tooltip  = document.getElementById('tooltip');
 let selectedColor = null;
 let hexColors     = [];
 
+// Each loaded variable holds its colour ('pink' or 'teal') until it is removed,
+// so the colour is tied to the variable's identity, not to which dropdown it sits in.
+let colorAssignment = {};
+
+function syncAssignments(active) {
+  // free a colour only when its variable is no longer loaded
+  Object.keys(colorAssignment).forEach(v => {
+    if (!active.includes(v)) delete colorAssignment[v];
+  });
+  // give any newly loaded variable the first free colour
+  active.forEach(v => {
+    if (!colorAssignment[v]) {
+      const used = new Set(Object.values(colorAssignment));
+      colorAssignment[v] = ['pink', 'teal'].find(a => !used.has(a)) || 'pink';
+    }
+  });
+}
+
 const VAR_LABELS = {
   'Tree potential': 'Trees',
   'Habitat potential': 'Habitats',
@@ -245,23 +263,30 @@ mapWrap.addEventListener('mousemove', e => {
 });
 mapWrap.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
 
-function getUniColor(ramp, cls) {
-  return ramp[[0, 3, 6][cls]];
-}
-
 function recolor() {
-  const vx   = selX.value, vy = selY.value, rk = selRamp.value;
-  const ramp = RAMPS[rk];
-  const bivariate = vx !== 'none' && vy !== 'none' && vx !== vy;
-  const uniVar    = bivariate ? null : (vx !== 'none' ? vx : (vy !== 'none' ? vy : null));
+  const ramp = RAMPS[selRamp.value];
+  const vx   = selX.value, vy = selY.value;
+
+  const active = [];
+  if (vx !== 'none') active.push(vx);
+  if (vy !== 'none' && vy !== vx) active.push(vy);
+  syncAssignments(active);
+
+  const bivariate = active.length === 2;
+  const uniVar    = active.length === 1 ? active[0] : null;
+  const pinkVar   = active.find(v => colorAssignment[v] === 'pink') || null;
+  const tealVar   = active.find(v => colorAssignment[v] === 'teal') || null;
 
   hexColors = polygons.map((el, i) => {
     const h = HEXES[i];
     let fill;
     if (bivariate) {
-      fill = ramp[GRID_IDX[`${h.cls[vx]},${h.cls[vy]}`]];
+      // teal variable drives the columns, pink variable the rows
+      fill = ramp[GRID_IDX[`${h.cls[tealVar]},${h.cls[pinkVar]}`]];
     } else if (uniVar) {
-      fill = getUniColor(ramp, h.cls[uniVar]);
+      fill = colorAssignment[uniVar] === 'pink'
+        ? ramp[GRID_IDX[`0,${h.cls[uniVar]}`]]   // pink edge (teal held low)
+        : ramp[GRID_IDX[`${h.cls[uniVar]},0`]];  // teal edge (pink held low)
     } else {
       fill = '#e8e8e8';
     }
@@ -271,10 +296,10 @@ function recolor() {
 
   selectedColor = null;
   applyFade();
-  renderLegend(ramp, vx, vy, bivariate, uniVar);
+  renderLegend(ramp, pinkVar, tealVar, bivariate, uniVar);
 }
 
-function renderLegend(ramp, vx, vy, bivariate, uniVar) {
+function renderLegend(ramp, pinkVar, tealVar, bivariate, uniVar) {
   if (!bivariate && !uniVar) { legend.innerHTML = ''; return; }
 
   if (bivariate) {
@@ -306,7 +331,7 @@ function renderLegend(ramp, vx, vy, bivariate, uniVar) {
     svg += `<rect x="${pad + extraLeft - pad - fs * 2}" y="-${fs}" width="${bgSize}" height="${bgSize}" rx="5"
           fill="rgba(255,255,255,0.92)" stroke="#ddd" stroke-width="1"/>`;
 
-    // 3x3 grid
+    // 3x3 grid — columns = teal variable, rows = pink variable
     for (let row = 2; row >= 0; row--) {
       for (let col = 0; col < 3; col++) {
         const color = ramp[GRID_IDX[`${col},${row}`]];
@@ -320,22 +345,22 @@ function renderLegend(ramp, vx, vy, bivariate, uniVar) {
       }
     }
 
-    // X labels — below grid, identical layout to y
+    // X labels — below grid, identical layout to y (teal variable)
     const xLow_x  = gx;
     const xHigh_x = gx + gridSize;
     const xRow1_y = ay + labelGap + fs;
     const xRow2_y = ay + labelGap + fs + labelGap + fs;
     svg += `<text x="${xLow_x}"  y="${xRow1_y}" font-size="${fs}" fill="#777" text-anchor="start">low</text>`;
     svg += `<text x="${xHigh_x}" y="${xRow1_y}" font-size="${fs}" fill="#777" text-anchor="end">high</text>`;
-    svg += `<text x="${gx + gridSize/2}" y="${xRow2_y}" font-size="${fs}" fill="#777" text-anchor="middle">← ${VAR_LABELS[vx]||vx} →</text>`;
+    svg += `<text x="${gx + gridSize/2}" y="${xRow2_y}" font-size="${fs}" fill="#777" text-anchor="middle">← ${VAR_LABELS[tealVar]||tealVar} →</text>`;
 
-    // Y labels — exact same layout as x, rotated -90deg around bottom-left corner of grid
+    // Y labels — exact same layout as x, rotated -90deg around bottom-left corner of grid (pink variable)
     // After rotation: "low" sits at bottom-left, "high" at top-left, label along left edge
     const yShift = gridSize + labelGap;
     svg += `<g transform="rotate(90, ${ax}, ${ay}) translate(-${yShift}, 0)">
           <text x="${ax}"              y="${ay + labelGap + fs}" font-size="${fs}" fill="#777" text-anchor="start">high</text>
           <text x="${ax + gridSize}"   y="${ay + labelGap + fs}" font-size="${fs}" fill="#777" text-anchor="end">low</text>
-          <text x="${ax + gridSize/2}" y="${ay + labelGap + fs + labelGap + fs}" font-size="${fs}" fill="#777" text-anchor="middle">← ${VAR_LABELS[vy]||vy} →</text>
+          <text x="${ax + gridSize/2}" y="${ay + labelGap + fs + labelGap + fs}" font-size="${fs}" fill="#777" text-anchor="middle">← ${VAR_LABELS[pinkVar]||pinkVar} →</text>
         </g>`;
 
     // Overall rotation of the whole legend
@@ -349,6 +374,7 @@ function renderLegend(ramp, vx, vy, bivariate, uniVar) {
     const labels = ['high', 'mid', 'low'];
     const W = pad + cell + 44 + pad;
     const H = pad + fs + 6 + 3 * h + 2 * gap + pad;
+    const isPink = uniVar === pinkVar;
 
     let svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">`;
     svg += `<rect x="0" y="0" width="${W}" height="${H}" rx="5"
@@ -356,7 +382,9 @@ function renderLegend(ramp, vx, vy, bivariate, uniVar) {
     svg += `<text x="${pad}" y="${pad + fs}" font-size="${fs}" fill="#777">${VAR_LABELS[uniVar]||uniVar}</text>`;
 
     [2, 1, 0].forEach((cls, i) => {
-      const color = getUniColor(ramp, cls);
+      const color = isPink
+        ? ramp[GRID_IDX[`0,${cls}`]]
+        : ramp[GRID_IDX[`${cls},0`]];
       const sel = color === selectedColor;
       const y = pad + fs + 6 + i * (h + gap);
       svg += `<rect x="${pad}" y="${y}" width="${cell}" height="${h}"
